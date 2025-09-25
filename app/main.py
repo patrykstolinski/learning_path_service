@@ -110,5 +110,3 @@ def get_path(pathId: str = Path(...)):
     item.pop("_id", None)
 
     return item
-
-

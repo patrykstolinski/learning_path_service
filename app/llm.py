@@ -1,6 +1,5 @@
-# app/llm.py
 import os, json
-from typing import Dict, Any, List
+from typing import Dict, List, Any
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -8,7 +7,7 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.2"))
+OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.1"))
 
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
@@ -26,23 +25,38 @@ def ask_openai_for_plan(
     desired_topics: List[str],
     topics: List[Dict[str, Any]],
     skills: List[Dict[str, Any]],
-    resources: List[Dict[str, Any]],) -> Dict[str, Any]:
+    resources: List[Dict[str, Any]]) -> Dict[str, Any]:
+
     if not client:
-        raise RuntimeError("OPENAI_API_KEY not set in .env")
+        raise RuntimeError("OPENAI_API_KEY is not set in .env")
+
     user_payload = {
         "desiredSkills": desired_skills,
         "desiredTopics": desired_topics,
-        "topics": [{"id": t.get("id"), "name": t.get("name")} for t in topics],
-        "skills": [{"id": s.get("id"), "name": s.get("name"), "topicID": s.get("topicID")} for s in skills],
-        "resources": [{"id": r.get("id"), "title": r.get("title"), "description": r.get("description","")} for r in resources]
+        "topics": [{
+            "id": topic.get("id"), 
+            "name": topic.get("name")
+            } for topic in topics],
+        "skills": [{
+            "id": skill.get("id"), 
+            "name": skill.get("skill"), 
+            "topicID": skill.get("topicID")
+            } for skill in skills],
+        "resources": [{
+            "id": resource.get("id"),
+            "title": resource.get("title"), 
+            "description": resource.get("description", "")
+        } for resource in resources]
     }
-    resp = client.chat.completions.create(
+
+    response = client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=[
-            {"role":"system","content": SYSTEM_PROMPT},
-            {"role":"user","content": json.dumps(user_payload, ensure_ascii=False)},
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)}
         ],
         temperature=OPENAI_TEMPERATURE,
-        response_format={"type":"json_object"},
+        response_format={"type": "json_object"}
     )
-    return json.loads(resp.choices[0].message.content)
+
+    return json.loads(response.choices[0].message.content)
